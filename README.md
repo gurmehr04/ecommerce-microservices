@@ -1,126 +1,152 @@
 
-# E-commerce Microservice Architecture Project
+# E-commerce Microservices Project (Spring Boot + RabbitMQ + MongoDB + Docker)
 
-## Tech Stack
-- Spring Boot (Java 17)
+## Overview
+This project is a Microservices-based E-commerce Application built using:
+- Spring Boot
 - MongoDB
 - RabbitMQ
-- REST APIs
-- Maven
-- Docker & Docker Compose (for easy setup)
+- Docker & Docker-Compose
 
-## Microservices in this Project
-| Service | Port | Responsibilities |
-|---------|------|-----------------|
-| Order Service | 8081 | Place new orders & trigger inventory check |
-| Inventory Service | 8082 | Manage product stock & trigger payment |
-| Payment Service | 8083 | Process payment after inventory confirmation |
+---
 
-## Pre-requisites
-Make sure these are installed in your system:
-- Java 17+
-- Maven
-- Docker Desktop
-- Postman (for API testing)
+## Microservices Involved
 
-## To Run the Entire Project Locally
+|Service|Port|Responsibility|
+|-------|----|--------------|
+|Order Service|8081|Place Orders, Communicate with Inventory & Payment Services|
+|Inventory Service|8082|Check Stock, Update Inventory|
+|Payment Service|8083|Process Payment & Update Order Status|
 
-### 1. Start Docker (MongoDB + RabbitMQ)
+---
+
+## Architecture Flow
+
 ```
-docker-compose up
-```
-> This will start:
-- MongoDB → port 27017
-- RabbitMQ → ports 5672 & 15672 (Dashboard)
-
-RabbitMQ Dashboard → http://localhost:15672  
-Username: `guest`  
-Password: `guest`
-
-### 2. Run Each Microservice Individually
-
-#### Order Service
-```
-cd order-service
-mvn spring-boot:run
+User → Order-Service → RabbitMQ → Inventory-Service → RabbitMQ → Payment-Service → RabbitMQ → Order-Service
 ```
 
-#### Inventory Service
+---
+
+## Folder Structure
+
 ```
-cd inventory-service
-mvn spring-boot:run
+ecommerce-microservices/
+│
+├── order-service/
+│   └── Dockerfile
+│
+├── inventory-service/
+│   └── Dockerfile
+│
+├── payment-service/
+│   └── Dockerfile
+│
+├── docker-compose.yml
+├── README.md
 ```
 
-#### Payment Service
-```
-cd payment-service
-mvn spring-boot:run
-```
+---
 
-## How to Test in Postman
+## Technologies Used
 
-### 1. Place an Order
+- Spring Boot 3.x
+- RabbitMQ for Messaging
+- MongoDB for Storage
+- Docker for Containerization
+- Docker-Compose for Multi-Container Management
+
+---
+
+## API Endpoints
+
+### Place Order
 ```
-POST → http://localhost:8081/order/place
-Body: raw JSON
+POST http://localhost:8081/api/order/place
+```
+Request Body:
+```json
 {
-  "product": "Laptop",
-  "quantity": 1
+  "productName": "iphone15",
+  "quantity": 2
 }
 ```
 
-→ Order Event will be sent to RabbitMQ Queue → Inventory will process it.
-
-### 2. Check Inventory Service Logs
-→ Inventory will either:
-- Update stock & trigger Payment event  
-- Or log insufficient stock.
-
-### 3. Payment Service Logs
-→ If Inventory was sufficient → Payment Service will process the order.
-
-## MongoDB GUI (Optional)
-Download Mongo Compass: https://www.mongodb.com/products/compass  
-Use connection string:
+### Check Inventory Directly
 ```
-mongodb://localhost:27017
+GET http://localhost:8082/api/inventory/check/{productName}/{quantity}
 ```
 
-View:
-- `orderdb`  
-- `inventorydb`  
-- `paymentdb`
+---
 
-## Ports Recap
-| Service | Port |
-|---------|------|
-| Order Service | 8081 |
-| Inventory Service | 8082 |
-| Payment Service | 8083 |
-| MongoDB | 27017 |
-| RabbitMQ | 5672 (service) & 15672 (dashboard) |
+## Running the Application
 
-## Important RabbitMQ Terms Used
-| Term | Value |
-|------|-------|
-| Exchange | order_exchange |
-| Queue | order_queue |
-| Routing Key | order_routingKey |
-
-## Commands for Maintenance
-
-### Stop All Docker Containers
+### Step 1 → Package All Services
+In each service run:
+```bash
+mvn clean package -DskipTests
 ```
+
+(inside order-service, inventory-service, payment-service)
+
+---
+
+### Step 2 → Build & Run Everything
+```bash
+docker-compose up --build
+```
+
+---
+
+### Step 3 → Stop Everything
+```bash
+CTRL + C
 docker-compose down
 ```
 
-### Clean Maven Build
+---
+
+## MongoDB Databases Used
+|Service|Database|
+|-------|--------|
+|order-service|orderdb|
+|inventory-service|inventorydb|
+|payment-service|paymentdb|
+
+---
+
+## RabbitMQ Queues
+|Queue Name|Used For|
+|-----------|--------|
+|order-queue|Order → Inventory|
+|payment-queue|Inventory → Payment → Order|
+
+---
+
+## Access RabbitMQ Dashboard
 ```
-mvn clean install
+URL: http://localhost:15672
+Username: guest
+Password: guest
 ```
 
-## Notes
-- Always start `docker-compose` first.
-- Then run all 3 services individually.
-- Use Postman to test order placing.
-- Track flow in console logs.
+---
+
+## Access MongoDB via Compass
+```
+URL: mongodb://localhost:27017
+```
+
+---
+
+## Run Health Check (Basic)
+Try:
+```
+curl http://localhost:8081/actuator/health
+curl http://localhost:8082/actuator/health
+curl http://localhost:8083/actuator/health
+```
+
+(If Spring Actuator Added)
+
+---
