@@ -17,7 +17,14 @@ public class OrderConsumer {
     @RabbitListener(queues = "order-queue")
     public void consumeOrder(OrderEvent event) {
         boolean inStock = inventoryService.isInStock(event.getProductName(), event.getQuantity());
-        event.setStatus(inStock ? "SUCCESS" : "FAILED");
+//        event.setStatus(inStock ? "SUCCESS" : "FAILED");
+        if (inStock) {
+            inventoryService.reduceStock(event.getProductName(), event.getQuantity());
+            event.setStatus("SUCCESS");
+        } else {
+            event.setStatus("FAILED");
+        }
+
 
         rabbitTemplate.convertAndSend("payment-queue", event);
     }
